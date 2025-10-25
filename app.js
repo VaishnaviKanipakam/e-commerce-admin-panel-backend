@@ -378,7 +378,7 @@ app.put("/edit_catgory_type", authenticationToken, authorizeRoles("admin"),(requ
 
 
 // Add to Cart Api
-app.post("/add-to-cart", authenticationToken, authorizeRoles("admin", "customer"),(request, response) => {
+app.post("/add_to_cart", authenticationToken, authorizeRoles("admin", "customer"),(request, response) => {
   const cartItemDetails = request.body
   const {eachCategoryId, userId, editCategoryTypeImage, editCategoryTypeName, editCategoryType, editCategoryPrice} = cartItemDetails
   const add_to_cart__items_table_query = `
@@ -388,6 +388,7 @@ app.post("/add-to-cart", authenticationToken, authorizeRoles("admin", "customer"
             product_name VARCHAR (1000), 
             product_image VARCHAR (1000), 
             product_type VARCHAR (1000), 
+            product_quantity INTEGER DEFAULT 1,
             user_id INTEGER,
             each_category_id INTEGER, 
             PRIMARY KEY (cart_product_id),
@@ -402,24 +403,48 @@ app.post("/add-to-cart", authenticationToken, authorizeRoles("admin", "customer"
       console.log("398", err);
       return 
     }
-    // response.status(200).json(result);
-    // console.log("402", result);
+    response.status(200).json(result);
+    console.log("402", result);
 
-    const insert_cart_item_details_query = `
-      INSERT INTO 
-        add_to_cart_table (each_category_id, user_id, product_image, product_name,  product_type, product_price)
-      VALUES(
-        ?, ?, ?, ?, ?, ?
-      );
+    // const insert_cart_item_details_query = `
+    //   INSERT INTO 
+    //     add_to_cart_table (each_category_id, user_id, product_image, product_name,  product_type, product_price)
+    //   VALUES(
+    //     ?, ?, ?, ?, ?, ?
+    //   );
+    // `;
+    // db.query(insert_cart_item_details_query, [eachCategoryId, userId, editCategoryTypeImage, editCategoryTypeName, editCategoryType, editCategoryPrice], (err, result) => {
+    //   if (err){
+    //     response.status(404).json("Cannot Add Cart Item");
+    //     console.log("418", err);
+    //     return 
+    //   }
+    //   response.status(200).json("Cart Item Added Successfully");
+    //   console.log("422", result);
+    // })
+  })
+})
+
+
+// Get Cart Items API
+app.get("/get_cart_items", authenticationToken, authorizeRoles("admin", "customer"),(request, response)=> {
+  const userId = request.query.user_id;
+    const get_all_cart_items_query = `
+      SELECT
+        *
+      FROM
+        add_to_cart_table
+      WHERE
+        user_id = ${userId};
     `;
-    db.query(insert_cart_item_details_query, [eachCategoryId, userId, editCategoryTypeImage, editCategoryTypeName, editCategoryType, editCategoryPrice], (err, result) => {
-      if (err){
-        response.status(404).json("Cannot Add Cart Item");
-        console.log("418", err);
+
+    db.query(get_all_cart_items_query, (err, result)=> {
+      if(err){
+        response.status(500).json("Cannot Get Cart Items");
+        console.log("442", err);
         return 
       }
-      response.status(200).json("Cart Item Added Successfully");
-      console.log("422", result);
+      response.status(200).json(result);
+      console.log("446", result);
     })
-  })
 })
