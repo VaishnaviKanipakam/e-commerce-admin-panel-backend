@@ -270,6 +270,7 @@ app.put("/edit_category", authenticationToken, authorizeRoles("admin"),(request,
   });
 });
 
+
 // Category Detailed API
 app.post("/add_category_type", authenticationToken, authorizeRoles("admin"),(request, response) => {
   const categoryId = request.query.category_id;
@@ -279,6 +280,7 @@ app.post("/add_category_type", authenticationToken, authorizeRoles("admin"),(req
     addCategoryImage,
     addCategoryName,
     addCategoryCount,
+    addCategoryPrice
   } = addCategoryTypeDetails;
   const create_category_Details_table = `
          CREATE TABLE IF NOT EXISTS category_type_table (
@@ -286,6 +288,7 @@ app.post("/add_category_type", authenticationToken, authorizeRoles("admin"),(req
             category_type VARCHAR (1000),
             category_image VARCHAR (1000),
             category_name VARCHAR (1000),
+            category_price INTEGER,
             item_count INTEGER,
             category_id INTEGER,
             PRIMARY KEY (each_category_id),
@@ -294,16 +297,21 @@ app.post("/add_category_type", authenticationToken, authorizeRoles("admin"),(req
   db.query(create_category_Details_table, (err, result) => {
     if (err) {
       response.status(500).json("Cannot Create Table");
+      console.log("298", err);
       return;
     }
+    // response.status(200).json("Table Create Successfully");
+    // console.log("302", result)
 
     const insert_data_into_category_Details_table = `
                 INSERT INTO 
-                    category_type_table (category_id, category_type, category_image, category_name,  item_count)
+                    category_type_table (category_id, category_type, category_image, category_name,  item_count, category_price)
                 VALUES
-                (${categoryId}, "${addCategoryType}", "${addCategoryImage}", "${addCategoryName}", ${addCategoryCount});
+                (
+                ?, ?, ?, ?, ?, ?
+                );
             `;
-    db.query(insert_data_into_category_Details_table, (err, result) => {
+    db.query(insert_data_into_category_Details_table,[categoryId, addCategoryType, addCategoryImage, addCategoryName, addCategoryCount, addCategoryPrice], (err, result) => {
       if (err) {
         response.status(500).json(`Cannot Insert Data`);
         return;
@@ -342,6 +350,7 @@ app.put("/edit_catgory_type", authenticationToken, authorizeRoles("admin"),(requ
     editCategoryTypeName,
     editCategoryTypeCount,
     editCategoryType,
+      editCategoryPrice,
   } = editCategoryTypeDetails;
 
   const update_category_type_query = `
@@ -351,7 +360,8 @@ app.put("/edit_catgory_type", authenticationToken, authorizeRoles("admin"),(requ
             category_image = "${editCategoryTypeImage}",
             category_name = "${editCategoryTypeName}",
             item_count = "${editCategoryTypeCount}",
-            category_type = "${editCategoryType}"
+            category_type = "${editCategoryType}",
+            category_price = ${editCategoryPrice}
         WHERE 
             each_category_id = ${eachCategoryId};
 
@@ -364,3 +374,52 @@ app.put("/edit_catgory_type", authenticationToken, authorizeRoles("admin"),(requ
     response.status(200).json("Category Updated Successfully");
   });
 });
+
+
+
+// Add to Cart Api
+app.post("/add-to-cart", authenticationToken, authorizeRoles("admin", "customer"),(request, response) => {
+  const cartItemDetails = request.body
+  const {eachCategoryId, userId, editCategoryTypeImage, editCategoryTypeName, editCategoryType, editCategoryPrice} = cartItemDetails
+  const add_to_cart__items_table_query = `
+     CREATE TABLE IF NOT EXISTS add_to_cart_table (
+            cart_product_id  INTEGER NOT NULL AUTO_INCREMENT,
+            product_price INTEGER, 
+            product_name VARCHAR (1000), 
+            product_image VARCHAR (1000), 
+            product_type VARCHAR (1000), 
+            user_id INTEGER,
+            each_category_id INTEGER, 
+            PRIMARY KEY (cart_product_id),
+            FOREIGN KEY (user_id) REFERENCES registration_table(id),
+            FOREIGN KEY (each_category_id) REFERENCES category_type_table(each_category_id)
+      );
+  `;
+
+  db.query(add_to_cart__items_table_query, (err, result) => {
+    if(err){
+      response.status(500).json("Cannot Create Table");
+      console.log("398", err);
+      return 
+    }
+    // response.status(200).json(result);
+    // console.log("402", result);
+
+    const insert_cart_item_details_query = `
+      INSERT INTO 
+        add_to_cart_table (each_category_id, user_id, product_image, product_name,  product_type, product_price)
+      VALUES(
+        ?, ?, ?, ?, ?, ?
+      );
+    `;
+    db.query(insert_cart_item_details_query, [eachCategoryId, userId, editCategoryTypeImage, editCategoryTypeName, editCategoryType, editCategoryPrice], (err, result) => {
+      if (err){
+        response.status(404).json("Cannot Add Cart Item");
+        console.log("418", err);
+        return 
+      }
+      response.status(200).json("Cart Item Added Successfully");
+      console.log("422", result);
+    })
+  })
+})
