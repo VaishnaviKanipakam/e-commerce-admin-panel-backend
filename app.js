@@ -403,27 +403,67 @@ app.post("/add_to_cart", authenticationToken, authorizeRoles("admin", "customer"
       console.log("398", err);
       return 
     }
-    response.status(200).json(result);
-    console.log("402", result);
+    // response.status(200).json(result);
+    // console.log("402", result);
 
-    // const insert_cart_item_details_query = `
-    //   INSERT INTO 
-    //     add_to_cart_table (each_category_id, user_id, product_image, product_name,  product_type, product_price)
-    //   VALUES(
-    //     ?, ?, ?, ?, ?, ?
-    //   );
-    // `;
-    // db.query(insert_cart_item_details_query, [eachCategoryId, userId, editCategoryTypeImage, editCategoryTypeName, editCategoryType, editCategoryPrice], (err, result) => {
-    //   if (err){
-    //     response.status(404).json("Cannot Add Cart Item");
-    //     console.log("418", err);
-    //     return 
-    //   }
-    //   response.status(200).json("Cart Item Added Successfully");
-    //   console.log("422", result);
-    // })
-  })
-})
+    const check_query = `
+      SELECT 
+        *
+      FROM 
+        add_to_cart_table
+      WHERE
+        user_id  = ? AND
+        each_category_id = ? AND
+         product_type = ?;
+    `;
+    db.query(check_query , [userId, eachCategoryId, editCategoryType], (err2, result) => {
+      if (err2){
+        response.status(500).json("Error Checking Cart");
+        console.log("421", err2);
+        return 
+      }
+      if (result.length > 0){
+        const update_query = `
+          UPDATE
+            add_to_cart_table
+          SET
+            product_quantity = product_quantity + 1 
+          WHERE
+            user_id  = ? AND
+        each_category_id = ? AND
+        product_type = ?;
+        `;
+        db.query(update_query, [userId, eachCategoryId, editCategoryType], (err3, result) => {
+          if (err3){
+            response.status(500).json("ERROR Updating Quantity");
+            console.log("437", err3);
+            return
+          }
+          response.status(200).json("Quantity Increased");
+          console.log("441", result)
+        });
+      }else{
+        const insert_cart_item_details_query = `
+      INSERT INTO 
+        add_to_cart_table (each_category_id, user_id, product_image, product_name,  product_type, product_price)
+      VALUES(
+        ?, ?, ?, ?, ?, ?
+      );
+    `;
+    db.query(insert_cart_item_details_query, [eachCategoryId, userId, editCategoryTypeImage, editCategoryTypeName, editCategoryType, editCategoryPrice], (err4, result) => {
+      if (err4){
+        response.status(404).json("Cannot Add Cart Item");
+        console.log("418", err4);
+        return 
+      }
+      response.status(200).json("Cart Item Added Successfully");
+      console.log("422", result);
+    });
+      };
+      
+    });
+  });
+});
 
 
 // Get Cart Items API
@@ -447,4 +487,54 @@ app.get("/get_cart_items", authenticationToken, authorizeRoles("admin", "custome
       response.status(200).json(result);
       console.log("446", result);
     })
+})
+
+
+//Update Cart API
+app.put("/update_cart_items", authenticationToken, authorizeRoles("admin", "customer"), (request, response) => {
+  const updatedCartItemDetails = request.body;
+  const productId = request.query.product_id;
+  const {productValue, productCount, produtcType, productCategoryId, userId} = updatedCartItemDetails;
+  console.log("498", productValue, productCount)
+  const update_cart_items_query = `
+  UPDATE
+    add_to_cart_table
+  SET
+      product_quantity = ?
+  WHERE
+        user_id = ? AND
+        each_category_id = ? AND
+        product_type = ? AND
+        cart_product_id = ?;`;
+  db.query(update_cart_items_query,[productCount, userId, productCategoryId, produtcType, productId], (err, result) => {
+    if(err){
+      response.status(500).json("Cannot Update Cart Item");
+      console.log("515", err);
+      return 
+    }
+    response.status(200).json(result);
+    console.log("519", result);
+  });
+}); 
+
+
+// Delete Cart Item
+app.delete("/delete_cart_item", authenticationToken, authorizeRoles("admin", "customer"), (request, response) => {
+  const productId = request.query.product_id;
+  const userId = request.query.user_id
+  const delete_cart_item_query = `
+   DELETE FROM add_to_cart_table
+   WHERE
+   user_id  = ${userId} AND
+    cart_product_id = ${productId};
+  `
+  db.query(delete_cart_item_query, (err, result) => {
+    if(err){
+      response.status(500).json("Cannot Delete Cart Item");
+      console.log("536", err)
+      return 
+    }
+    response.status(200).json("Cart Item Deleted Successfully");
+    console.log("540", result)
+  })
 })
